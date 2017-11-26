@@ -182,11 +182,13 @@ class ELFAnalysis:
             global conn, hash_value, lib_name
             self.lib_list = lib_linked_list
             print lib_linked_list
-            self.r2p=r2pipe.open(lib)  # open without arguments only for #!pipe
-            hash_value = subprocess.check_output('/usr/bin/rahash2 -qa sha256 ' + lib, shell=True).split(' ')[0]
+            basename = lib.split('/')[-1]
+            filename = os.getenv('DOCKERGATE_HOME') + '/snapshot/' + basename
+            self.r2p=r2pipe.open(filename)  # open without arguments only for #!pipe
+            hash_value = subprocess.check_output('/usr/bin/rahash2 -qa sha256 ' + filename, shell=True).split(' ')[0]
             self.lib_list.append(hash_value)
             print 'Now analyzing ' +  lib
-            lib_name = lib.split(os.getenv('DOCKERGATE_HOME') + '/snapshot/' + self.image_name + '_snapshot')[1]
+            lib_name = lib
             logging.info('Now analyzing ' + lib_name)
             print(hash_value,lib_name)
             self.r2p.cmd('aaa')  # analyze all symbols and calls
@@ -209,12 +211,13 @@ class ELFAnalysis:
 
         def analyze_executable(self, binary, lib_linked_list):
             self.lib_list = lib_linked_list
+            filename = os.getenv('DOCKERGATE_HOME') + '/snapshot/' + binary.split('/')[-1]
             print 'analyzing ' + binary
-            rabin2_output = subprocess.check_output("rabin2 -ij " + binary, shell=True)
+            rabin2_output = subprocess.check_output("rabin2 -ij " + filename, shell=True)
             logging.debug('Now analyzing ' + binary)
             ret_list = set()
             try:
-                hash_value = subprocess.check_output('/usr/bin/rahash2 -qa sha256 ' + binary, shell=True).split(' ')[0]
+                hash_value = subprocess.check_output('/usr/bin/rahash2 -qa sha256 ' + filename, shell=True).split(' ')[0]
                 if self.check_for_binary(hash_value):
                     return self.get_syscalls_from_binaries(hash_value)
                 imported_symbols = json.loads(rabin2_output)
